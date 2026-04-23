@@ -1,0 +1,5 @@
+pyTelegramBotAPI
+python-deriv-api
+pandas
+websockets
+flask
