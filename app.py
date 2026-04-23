@@ -19,7 +19,7 @@ def run_web():
 # --- CONFIGURATION ---
 TOKEN_TG = "8796066471:AAEGpKpC0aJpLNNEf1KB0JBYW5NhXypPqUA"
 ID_CHAT = "7893239258"
-TOKEN_DERIV = ""
+TOKEN_DERIV = "t0TDC2HM8Ey8mH9"
 
 bot = telebot.TeleBot(TOKEN_TG)
 current_tf = "5m"
