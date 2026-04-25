@@ -68,11 +68,6 @@ def god_signal(df):
     c = df.iloc[-2]
     prev = df.iloc[-3]
 
-    # ================= TREND =================
-    trend_up = c['close'] > df['ema50'].iloc[-2]
-    trend_down = c['close'] < df['ema50'].iloc[-2]
-
-    # ================= STRUCTURE (BOS + CHoCH simplifié) =================
     lookback = 20
     hh = df['high'].iloc[-lookback:-2].max()
     ll = df['low'].iloc[-lookback:-2].min()
@@ -80,11 +75,6 @@ def god_signal(df):
     bos_up = c['close'] > hh
     bos_down = c['close'] < ll
 
-    # CHoCH (changement de structure simple)
-    choch_up = prev['close'] < prev['open'] and c['close'] > prev['high']
-    choch_down = prev['close'] > prev['open'] and c['close'] < prev['low']
-
-    # ================= LIQUIDITY SWEEP =================
     body = abs(c['close'] - c['open'])
     upper_wick = c['high'] - max(c['open'], c['close'])
     lower_wick = min(c['open'], c['close']) - c['low']
@@ -92,39 +82,33 @@ def god_signal(df):
     liquidity_buy = (c['low'] < ll) and (lower_wick > body)
     liquidity_sell = (c['high'] > hh) and (upper_wick > body)
 
-    # ================= ORDER FLOW (simple OB proxy) =================
     bullish_ob = prev['close'] < prev['open']
     bearish_ob = prev['close'] > prev['open']
 
-    # ================= SCORING SYSTEM =================
+    trend_up = c['close'] > df['ema50'].iloc[-2]
+    trend_down = c['close'] < df['ema50'].iloc[-2]
+
     buy_score = 0
     sell_score = 0
 
-    # BUY
     if trend_up:
         buy_score += 1
     if bos_up:
-        buy_score += 1
-    if choch_up:
         buy_score += 1
     if liquidity_buy:
         buy_score += 1
     if bullish_ob:
         buy_score += 1
 
-    # SELL
     if trend_down:
         sell_score += 1
     if bos_down:
-        sell_score += 1
-    if choch_down:
         sell_score += 1
     if liquidity_sell:
         sell_score += 1
     if bearish_ob:
         sell_score += 1
 
-    # ================= FILTER FINAL =================
     if buy_score >= 4:
         return "ACHAT 🔵", c['close']
 
