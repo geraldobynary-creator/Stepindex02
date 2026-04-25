@@ -62,38 +62,76 @@ def market_ok(df):
 
 # ================== GOD MODE STRATEGY ==================
 def god_signal(df):
+
     df['ema50'] = df['close'].ewm(span=50).mean()
-
-    slope = df['ema50'].iloc[-2] - df['ema50'].iloc[-6]
-
-    df['range'] = df['high'] - df['low']
-    avg_range = df['range'].rolling(20).mean()
 
     c = df.iloc[-2]
     prev = df.iloc[-3]
 
+    # ================= TREND =================
+    trend_up = c['close'] > df['ema50'].iloc[-2]
+    trend_down = c['close'] < df['ema50'].iloc[-2]
+
+    # ================= STRUCTURE (BOS + CHoCH simplifié) =================
+    lookback = 20
+    hh = df['high'].iloc[-lookback:-2].max()
+    ll = df['low'].iloc[-lookback:-2].min()
+
+    bos_up = c['close'] > hh
+    bos_down = c['close'] < ll
+
+    # CHoCH (changement de structure simple)
+    choch_up = prev['close'] < prev['open'] and c['close'] > prev['high']
+    choch_down = prev['close'] > prev['open'] and c['close'] < prev['low']
+
+    # ================= LIQUIDITY SWEEP =================
     body = abs(c['close'] - c['open'])
     upper_wick = c['high'] - max(c['open'], c['close'])
     lower_wick = min(c['open'], c['close']) - c['low']
 
-    if not market_ok(df):
-        return None, None
+    liquidity_buy = (c['low'] < ll) and (lower_wick > body)
+    liquidity_sell = (c['high'] > hh) and (upper_wick > body)
 
-    signal = None
+    # ================= ORDER FLOW (simple OB proxy) =================
+    bullish_ob = prev['close'] < prev['open']
+    bearish_ob = prev['close'] > prev['open']
 
-    # 🔵 BUY
-    if c['close'] > df['ema50'].iloc[-2] and slope > 0:
-        if prev['close'] < prev['open']:
-            if lower_wick > body and c['range'] > avg_range.iloc[-2]:
-                signal = "ACHAT 🔵"
+    # ================= SCORING SYSTEM =================
+    buy_score = 0
+    sell_score = 0
 
-    # 🔴 SELL
-    elif c['close'] < df['ema50'].iloc[-2] and slope < 0:
-        if prev['close'] > prev['open']:
-            if upper_wick > body and c['range'] > avg_range.iloc[-2]:
-                signal = "VENTE 🔴"
+    # BUY
+    if trend_up:
+        buy_score += 1
+    if bos_up:
+        buy_score += 1
+    if choch_up:
+        buy_score += 1
+    if liquidity_buy:
+        buy_score += 1
+    if bullish_ob:
+        buy_score += 1
 
-    return signal, c['close']
+    # SELL
+    if trend_down:
+        sell_score += 1
+    if bos_down:
+        sell_score += 1
+    if choch_down:
+        sell_score += 1
+    if liquidity_sell:
+        sell_score += 1
+    if bearish_ob:
+        sell_score += 1
+
+    # ================= FILTER FINAL =================
+    if buy_score >= 4:
+        return "ACHAT 🔵", c['close']
+
+    if sell_score >= 4:
+        return "VENTE 🔴", c['close']
+
+    return None, None
 
 # ================== TELEGRAM START + BUTTONS ==================
 @bot.message_handler(commands=['start'])
